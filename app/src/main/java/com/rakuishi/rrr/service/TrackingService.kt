@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,13 +48,18 @@ class TrackingService : Service() {
         private val _isTracking = MutableStateFlow(false)
         val isTracking: StateFlow<Boolean> = _isTracking.asStateFlow()
 
+        private val _elapsedMs = MutableStateFlow(0L)
+        val elapsedMs: StateFlow<Long> = _elapsedMs.asStateFlow()
+
         fun resetState() {
             _trackingPoints.value = emptyList()
             _isTracking.value = false
+            _elapsedMs.value = 0L
         }
     }
 
     private var activityId: Long = 0
+    private var startTimeMs: Long = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -101,7 +107,15 @@ class TrackingService : Service() {
 
         try {
             fusedClient.requestLocationUpdates(request, locationCallback, mainLooper)
+            startTimeMs = System.currentTimeMillis()
             _isTracking.value = true
+            // 毎秒経過時間を更新
+            scope.launch {
+                while (_isTracking.value) {
+                    _elapsedMs.value = System.currentTimeMillis() - startTimeMs
+                    delay(1000L)
+                }
+            }
             Log.d(TAG, "Tracking started for activity $activityId")
         } catch (_: SecurityException) {
             Log.e(TAG, "Location permission not granted")

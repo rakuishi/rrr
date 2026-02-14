@@ -1,16 +1,22 @@
 package com.rakuishi.rrr.ui
 
 import android.Manifest
+import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -31,8 +39,11 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.rakuishi.rrr.R
+import com.rakuishi.rrr.service.TrackingService
+import java.util.Locale
 
 private val DEFAULT_LOCATION = LatLng(35.6812, 139.7671)
 private const val DEFAULT_ZOOM = 15f
@@ -40,6 +51,8 @@ private const val DEFAULT_ZOOM = 15f
 @Composable
 fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val trackingPoints by TrackingService.trackingPoints.collectAsState()
+    val elapsedMs by TrackingService.elapsedMs.collectAsState()
     var hasLocationPermission by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -79,6 +92,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
         }
     }
 
+    val isRecording = uiState.mode == TrackingMode.RECORDING
+    val routePoints = trackingPoints.map { LatLng(it.latitude, it.longitude) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
@@ -86,9 +102,44 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             properties = MapProperties(
                 isMyLocationEnabled = hasLocationPermission,
             ),
-        )
+        ) {
+            if (routePoints.size >= 2) {
+                Polyline(
+                    points = routePoints,
+                    color = Color(0xFF1976D2),
+                    width = 12f,
+                )
+            }
+        }
 
-        val isRecording = uiState.mode == TrackingMode.RECORDING
+        // 記録中のオーバーレイ: 経過時間と走行距離
+        if (isRecording) {
+            val distanceM = calculateDistance(trackingPoints)
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 64.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = formatTime(elapsedMs),
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = formatDistance(distanceM),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                )
+            }
+        }
 
         FloatingActionButton(
             onClick = {
@@ -114,5 +165,41 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 modifier = Modifier.size(32.dp),
             )
         }
+    }
+}
+
+private fun calculateDistance(points: List<com.rakuishi.rrr.data.db.Point>): Double {
+    var total = 0.0
+    for (i in 1 until points.size) {
+        val prev = points[i - 1]
+        val curr = points[i]
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            prev.latitude, prev.longitude,
+            curr.latitude, curr.longitude,
+            results,
+        )
+        total += results[0]
+    }
+    return total
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%d:%02d", minutes, seconds)
+    }
+}
+
+private fun formatDistance(meters: Double): String {
+    return if (meters >= 1000) {
+        String.format(Locale.US, "%.2f km", meters / 1000)
+    } else {
+        String.format(Locale.US, "%.0f m", meters)
     }
 }
