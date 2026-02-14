@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.location.Location
 import android.os.IBinder
 import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -37,6 +38,8 @@ class TrackingService : Service() {
         private const val CHANNEL_ID = "tracking_channel"
         private const val NOTIFICATION_ID = 1
         private const val INTERVAL_MS = 3000L
+        private const val MAX_ACCURACY_M = 20f
+        private const val MAX_SPEED_M_PER_S = 13.9f // 50 km/h
 
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
@@ -60,6 +63,7 @@ class TrackingService : Service() {
 
     private var activityId: Long = 0
     private var startTimeMs: Long = 0
+    private var lastLocation: Location? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -69,6 +73,8 @@ class TrackingService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 for (location in result.locations) {
+                    if (!isLocationValid(location)) continue
+
                     val point = Point(
                         activityId = activityId,
                         latitude = location.latitude,
@@ -79,7 +85,8 @@ class TrackingService : Service() {
                         val repository = (application as App).repository
                         repository.insertPoint(point)
                     }
-                    Log.d(TAG, "Point: ${location.latitude}, ${location.longitude}")
+                    lastLocation = location
+                    Log.d(TAG, "Point: ${location.latitude}, ${location.longitude}, accuracy: ${location.accuracy}")
                 }
             }
         }
@@ -126,9 +133,34 @@ class TrackingService : Service() {
     private fun stopTracking() {
         fusedClient.removeLocationUpdates(locationCallback)
         _isTracking.value = false
+        lastLocation = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Log.d(TAG, "Tracking stopped")
+    }
+
+    private fun isLocationValid(location: Location): Boolean {
+        // 精度フィルタ: accuracy が閾値を超えたら除外
+        if (location.hasAccuracy() && location.accuracy > MAX_ACCURACY_M) {
+            Log.d(TAG, "Filtered: accuracy ${location.accuracy}m > ${MAX_ACCURACY_M}m")
+            return false
+        }
+
+        // 速度フィルタ: 前回ポイントからの移動速度が非現実的なら除外
+        val prev = lastLocation
+        if (prev != null) {
+            val distanceM = prev.distanceTo(location)
+            val timeSec = (location.time - prev.time) / 1000f
+            if (timeSec > 0) {
+                val speedMPerS = distanceM / timeSec
+                if (speedMPerS > MAX_SPEED_M_PER_S) {
+                    Log.d(TAG, "Filtered: speed ${speedMPerS}m/s > ${MAX_SPEED_M_PER_S}m/s")
+                    return false
+                }
+            }
+        }
+
+        return true
     }
 
     override fun onDestroy() {
