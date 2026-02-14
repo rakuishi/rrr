@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +53,8 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.rakuishi.rrr.R
 import com.rakuishi.rrr.service.TrackingService
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private val DEFAULT_LOCATION = LatLng(35.6812, 139.7671)
@@ -64,6 +67,9 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val trackingPoints by TrackingService.trackingPoints.collectAsState()
     val elapsedMs by TrackingService.elapsedMs.collectAsState()
     var hasLocationPermission by remember { mutableStateOf(false) }
+    var isFollowingUser by remember { mutableStateOf(false) }
+    // カメラ追従のアニメーション回数を追跡し、ユーザー操作と区別する
+    var programmaticMoveCount by remember { mutableStateOf(0) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -93,6 +99,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             fusedClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
                     val latLng = LatLng(location.latitude, location.longitude)
+                    programmaticMoveCount++
                     cameraPositionState.move(
                         CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM)
                     )
@@ -107,11 +114,51 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val selectedPoints = uiState.selectedActivityPoints.map { LatLng(it.latitude, it.longitude) }
     val showingHistory = selectedPoints.isNotEmpty()
 
+    // 記録開始時にカメラ追従を有効化
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            isFollowingUser = true
+        }
+    }
+
+    // 記録中: 新しいポイントが追加されたらカメラを追従
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(isRecording) {
+        if (!isRecording) return@LaunchedEffect
+        snapshotFlow { trackingPoints.lastOrNull() }
+            .distinctUntilChanged()
+            .drop(1) // 初回（既存リスト）をスキップ
+            .collect { point ->
+                if (point != null && isFollowingUser) {
+                    val latLng = LatLng(point.latitude, point.longitude)
+                    programmaticMoveCount++
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLng(latLng)
+                    )
+                }
+            }
+    }
+
+    // ユーザーが地図を手動操作したら追従を停止
+    LaunchedEffect(Unit) {
+        snapshotFlow { cameraPositionState.isMoving }
+            .collect { isMoving ->
+                if (!isMoving && programmaticMoveCount > 0) {
+                    // プログラムによる移動が完了
+                    programmaticMoveCount--
+                } else if (isMoving && programmaticMoveCount == 0 && isFollowingUser) {
+                    // ユーザー操作による移動
+                    isFollowingUser = false
+                }
+            }
+    }
+
     // 過去の軌跡選択時にカメラを移動
     LaunchedEffect(selectedPoints) {
         if (selectedPoints.size >= 2) {
             val boundsBuilder = LatLngBounds.builder()
             selectedPoints.forEach { boundsBuilder.include(it) }
+            programmaticMoveCount++
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 80)
             )
@@ -258,13 +305,17 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
 
         // 現在地ボタン（右下）
         if (hasLocationPermission) {
-            val scope = rememberCoroutineScope()
             SmallFloatingActionButton(
                 onClick = {
+                    // 記録中なら追従を再開
+                    if (isRecording) {
+                        isFollowingUser = true
+                    }
                     val fusedClient = LocationServices.getFusedLocationProviderClient(context)
                     try {
                         fusedClient.lastLocation.addOnSuccessListener { location ->
                             if (location != null) {
+                                programmaticMoveCount++
                                 scope.launch {
                                     cameraPositionState.animate(
                                         CameraUpdateFactory.newLatLngZoom(
