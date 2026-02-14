@@ -33,4 +33,8 @@ class ActivityRepository(
     suspend fun getPoints(activityId: Long): List<Point> {
         return pointDao.getByActivityId(activityId)
     }
+
+    suspend fun deleteActivity(id: Long) {
+        activityDao.deleteById(id)
+    }
 }

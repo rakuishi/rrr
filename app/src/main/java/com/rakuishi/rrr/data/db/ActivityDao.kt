@@ -19,4 +19,7 @@ interface ActivityDao {
 
     @Query("SELECT * FROM activity WHERE id = :id")
     suspend fun getById(id: Long): Activity?
+
+    @Query("DELETE FROM activity WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
