@@ -171,7 +171,7 @@ class TrackingService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Tracking",
+            getString(R.string.notification_channel_name),
             NotificationManager.IMPORTANCE_LOW,
         )
         val manager = getSystemService(NotificationManager::class.java)
@@ -181,7 +181,7 @@ class TrackingService : Service() {
     private fun buildNotification(): Notification {
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText("Recording your run…")
+            .setContentText(getString(R.string.notification_recording))
             .setSmallIcon(R.drawable.ic_play)
             .setOngoing(true)
             .build()

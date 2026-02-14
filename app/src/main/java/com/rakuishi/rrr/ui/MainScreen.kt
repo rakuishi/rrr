@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -191,7 +192,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                     painter = painterResource(
                         if (showingHistory) R.drawable.ic_close else R.drawable.ic_list
                     ),
-                    contentDescription = if (showingHistory) "閉じる" else "履歴",
+                    contentDescription = if (showingHistory) stringResource(R.string.content_description_close) else stringResource(R.string.content_description_history),
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -218,7 +219,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 },
                 text = {
                     Text(
-                        text = "Start",
+                        text = stringResource(R.string.action_start),
                         fontSize = 20.sp,
                         modifier = Modifier.padding(end = 8.dp),
                     )
@@ -247,7 +248,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
                 },
                 text = {
                     Text(
-                        text = "Stop",
+                        text = stringResource(R.string.action_stop),
                         fontSize = 20.sp,
                         modifier = Modifier.padding(end = 8.dp),
                     )
@@ -287,7 +288,7 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_my_location),
-                    contentDescription = "現在地",
+                    contentDescription = stringResource(R.string.content_description_my_location),
                     modifier = Modifier.size(24.dp),
                 )
             }

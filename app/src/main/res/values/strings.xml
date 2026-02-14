@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">RRR</string>
+
+    <!-- MainScreen -->
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="content_description_history">History</string>
+    <string name="content_description_close">Close</string>
+    <string name="content_description_my_location">My location</string>
+
+    <!-- RecordingOverlay -->
+    <string name="label_time">Time</string>
+    <string name="label_distance">Distance</string>
+
+    <!-- ActivityBottomSheet -->
+    <string name="activity_list_title">Activities</string>
+    <string name="activity_list_empty">No activities yet</string>
+    <string name="content_description_delete">Delete</string>
+    <string name="delete_dialog_title">Delete activity</string>
+    <string name="delete_dialog_message">Delete this activity?</string>
+    <string name="delete_dialog_confirm">Delete</string>
+    <string name="delete_dialog_cancel">Cancel</string>
+
+    <!-- TrackingService -->
+    <string name="notification_channel_name">Tracking</string>
+    <string name="notification_recording">Recording your run…</string>
 </resources>

@@ -1,0 +1,25 @@
+<resources>
+    <!-- MainScreen -->
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="content_description_history">履歴</string>
+    <string name="content_description_close">閉じる</string>
+    <string name="content_description_my_location">現在地</string>
+
+    <!-- RecordingOverlay -->
+    <string name="label_time">時間</string>
+    <string name="label_distance">距離</string>
+
+    <!-- ActivityBottomSheet -->
+    <string name="activity_list_title">アクティビティ</string>
+    <string name="activity_list_empty">アクティビティはまだありません</string>
+    <string name="content_description_delete">削除</string>
+    <string name="delete_dialog_title">アクティビティを削除</string>
+    <string name="delete_dialog_message">このアクティビティを削除しますか？</string>
+    <string name="delete_dialog_confirm">削除</string>
+    <string name="delete_dialog_cancel">キャンセル</string>
+
+    <!-- TrackingService -->
+    <string name="notification_channel_name">トラッキング</string>
+    <string name="notification_recording">ランニングを記録中…</string>
+</resources>

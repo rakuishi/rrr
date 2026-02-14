@@ -35,6 +35,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rakuishi.rrr.R
@@ -86,14 +87,14 @@ private fun ActivityListContent(
             .padding(horizontal = 16.dp),
     ) {
         Text(
-            text = "アクティビティ",
+            text = stringResource(R.string.activity_list_title),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 12.dp),
         )
 
         if (activities.isEmpty()) {
             Text(
-                text = "アクティビティはまだありません",
+                text = stringResource(R.string.activity_list_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 24.dp),
@@ -160,7 +161,7 @@ private fun ActivityRow(
         IconButton(onClick = { showDeleteDialog = true }) {
             Icon(
                 painter = painterResource(R.drawable.ic_delete),
-                contentDescription = "削除",
+                contentDescription = stringResource(R.string.content_description_delete),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
@@ -170,19 +171,19 @@ private fun ActivityRow(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("アクティビティを削除") },
-            text = { Text("このアクティビティを削除しますか？") },
+            title = { Text(stringResource(R.string.delete_dialog_title)) },
+            text = { Text(stringResource(R.string.delete_dialog_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onDelete()
                 }) {
-                    Text("削除")
+                    Text(stringResource(R.string.delete_dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("キャンセル")
+                    Text(stringResource(R.string.delete_dialog_cancel))
                 }
             },
         )
