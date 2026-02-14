@@ -1,16 +1,10 @@
 package com.rakuishi.rrr.ui
 
 import android.Manifest
-import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,25 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,15 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,17 +50,12 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.rakuishi.rrr.R
-import com.rakuishi.rrr.data.db.Activity
 import com.rakuishi.rrr.service.TrackingService
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 private val DEFAULT_LOCATION = LatLng(35.6812, 139.7671)
 private const val DEFAULT_ZOOM = 15f
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
@@ -184,54 +156,17 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             }
         }
 
-        // 記録中のオーバーレイ: 経過時間と走行距離
+        // 記録中のオーバーレイ
         if (isRecording) {
-            val distanceM = calculateDistance(trackingPoints)
-
-            Surface(
+            RecordingOverlay(
+                elapsedMs = elapsedMs,
+                distanceM = calculateDistance(trackingPoints),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shadowElevation = 4.dp,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "時間",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = formatTime(elapsedMs),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "距離",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = formatDistance(distanceM),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
+            )
         }
 
         // リストボタン（端に配置）: 待機モード → リストアイコン、軌跡表示中 → ×アイコン
@@ -358,181 +293,14 @@ fun MainScreen(viewModel: MainViewModel = viewModel()) {
             }
         }
 
-        // ボトムシート: 過去の走行記録一覧
+        // ボトムシート: 過去のアクティビティ一覧
         if (uiState.showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { viewModel.hideBottomSheet() },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
-            ) {
-                ActivityListContent(
-                    activities = activities,
-                    onActivityClick = { viewModel.selectActivity(it.id) },
-                    onActivityDelete = { viewModel.deleteActivity(it.id) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActivityListContent(
-    activities: List<Activity>,
-    onActivityClick: (Activity) -> Unit,
-    onActivityDelete: (Activity) -> Unit,
-) {
-    val listState = rememberLazyListState()
-
-    // リストが先頭にいるときだけ上方向のスクロールをシートのドラッグに委譲する
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                return Offset.Zero
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(
-            text = "アクティビティ",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 12.dp),
-        )
-
-        if (activities.isEmpty()) {
-            Text(
-                text = "アクティビティはまだありません",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 24.dp),
-            )
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .nestedScroll(nestedScrollConnection),
-            ) {
-                items(activities) { activity ->
-                    ActivityRow(
-                        activity = activity,
-                        onClick = { onActivityClick(activity) },
-                        onDelete = { onActivityDelete(activity) },
-                    )
-                    HorizontalDivider()
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun ActivityRow(
-    activity: Activity,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row {
-                Text(
-                    text = formatTime(activity.totalTimeMs),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = formatDistance(activity.totalDistanceM),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = dateFormat.format(Date(activity.createdAt)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ActivityBottomSheet(
+                activities = activities,
+                onActivityClick = { viewModel.selectActivity(it.id) },
+                onActivityDelete = { viewModel.deleteActivity(it.id) },
+                onDismiss = { viewModel.hideBottomSheet() },
             )
         }
-        IconButton(onClick = { showDeleteDialog = true }) {
-            Icon(
-                painter = painterResource(R.drawable.ic_delete),
-                contentDescription = "削除",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("アクティビティを削除") },
-            text = { Text("このアクティビティを削除しますか？") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onDelete()
-                }) {
-                    Text("削除")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("キャンセル")
-                }
-            },
-        )
-    }
-}
-
-private fun calculateDistance(points: List<com.rakuishi.rrr.data.db.Point>): Double {
-    var total = 0.0
-    for (i in 1 until points.size) {
-        val prev = points[i - 1]
-        val curr = points[i]
-        val results = FloatArray(1)
-        Location.distanceBetween(
-            prev.latitude, prev.longitude,
-            curr.latitude, curr.longitude,
-            results,
-        )
-        total += results[0]
-    }
-    return total
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format(Locale.US, "%02d:%02d", minutes, seconds)
-    }
-}
-
-private fun formatDistance(meters: Double): String {
-    return if (meters >= 1000) {
-        String.format(Locale.US, "%.2fkm", meters / 1000)
-    } else {
-        String.format(Locale.US, "%.0fm", meters)
     }
 }
