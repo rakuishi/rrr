@@ -1,7 +1,7 @@
 # TODO
 
 - [x] Gradle に依存ライブラリを追加。Room, Google Maps SDK (Maps Compose), Coroutines, ViewModel, Location Services を libs.versions.toml と build.gradle.kts に追加する。ビルドが通ることを実機で確認
-- [ ] Google Maps を全画面表示。MainScreen.kt を作成し、Google Maps を全画面で表示する。MainActivity から呼び出す。実機で地図が表示されることを確認
+- [x] Google Maps を全画面表示。MainScreen.kt を作成し、Google Maps を全画面で表示する。MainActivity から呼び出す。実機で地図が表示されることを確認
 - [ ] 現在地の表示と権限リクエスト。ACCESS_FINE_LOCATION の権限リクエストを実装し、現在地を地図の中心に表示する。実機で位置情報の許可ダイアログと現在地表示を確認
 - [ ] 待機モードの UI。FAB（▶）を画面下中央に配置する。タップで記録モードに遷移する状態管理を MainViewModel に実装。実機で FAB の表示と状態遷移を確認
 - [ ] 記録モードの UI。FAB を停止ボタン（■）に切り替える
