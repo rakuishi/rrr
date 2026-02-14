@@ -6,11 +6,9 @@
 
 - Kotlin, Jetpack Compose, Material 3
 - Google Maps SDK (Maps Compose) で地図描画
-- Room で走行データを永続化
+- Room で活動データを永続化
 - Coroutines + Flow で非同期処理
-- Min SDK 33 / Target SDK 35
-- Gradle Kotlin DSL
-- パッケージ: `com.rakuishi.rrr`
+- Min SDK 33 / Target SDK 36
 
 ## アーキテクチャ
 
@@ -18,20 +16,22 @@ Single Activity 構成。MVVM で ViewModel が UiState を持ち、Room DAO →
 
 ## 画面構成
 
-画面は一つ。Google Maps が全面に広がり、モードによって UI が切り替わる。
+一画面構成。Google Maps が全画面表示され、待機／記録モードにより UI が切り替わる。
 
 ### 待機モード
 
-- 現在地を中心に地図を表示
-- 画面下中央の FAB（▶）をタップすると記録開始
-- 過去の走行記録へのアクセス手段を設ける（見せ方は未定）
+- 現在地を中心に地図を表示する
+- 画面下中央の FAB（▶）をタップすると記録を開始する
+- FAB の左にリストボタンを配置する。タップするとボトムシートが開き、過去のアクティビティを最新順に一覧表示する
+- アクティビティをタップすると地図上に過去の軌跡を Polyline で描画する。表示中は FAB を非表示にし、リストボタンが ×（閉じる）に変わる
+- 各アクティビティにはゴミ箱ボタンがあり、確認ダイアログを経て削除できる
 
 ### 記録モード
 
-- 走行ルートを Polyline でリアルタイム描画
-- 地図上部に経過時間と走行距離をオーバーレイ
+- 走行ルートを Polyline でリアルタイム描画する
+- 地図上部に経過時間と走行距離をオーバーレイ表示する
 - FAB が停止ボタン（■）に変わる
-- 停止タップ → 確認ダイアログ → 保存して待機モードへ
+- 停止タップで記録を終了し、Activity の合計時間・距離を集計して保存する
 
 ## データモデル
 
@@ -56,17 +56,13 @@ Single Activity 構成。MVVM で ViewModel が UiState を持ち、Room DAO →
 
 ## 位置情報
 
-Foreground Service + `FusedLocationProviderClient` で GPS を取得する。記録中は通知を出し続ける。
+Foreground Service + `FusedLocationProviderClient` で GPS を 3 秒間隔で取得する。記録中は通知を出し続ける。経過時間は 1 秒ごとに更新する。
 
-権限: `ACCESS_FINE_LOCATION`, `FOREGROUND_SERVICE`, `POST_NOTIFICATIONS`
+権限: `ACCESS_FINE_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`
 
 ## バックアップ
 
-Room の DB ファイルを Android Auto Backup の対象に含める。`allowBackup="true"` と backup rules で制御。25MB 以内に収める。
-
-## 後回し
-
-- 音声コーチング（TTS で経過時間・距離を時間ベースで読み上げ）
+Room の DB ファイルを Android Auto Backup の対象に含める。`allowBackup="true"` と backup rules で制御する。
 
 ## パッケージ構成
 
@@ -87,7 +83,10 @@ com.rakuishi.rrr/
 │   ├── MainScreen.kt
 │   ├── MainViewModel.kt
 │   └── theme/
-│       └── Theme.kt
+│       ├── Color.kt
+│       ├── Theme.kt
+│       └── Type.kt
+├── MainActivity.kt
 └── App.kt
 ```
 
