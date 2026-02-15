@@ -78,7 +78,8 @@ com.rakuishi.rrr/
 │   └── repository/
 │       └── ActivityRepository.kt
 ├── service/
-│   └── TrackingService.kt
+│   ├── TrackingService.kt
+│   └── VoiceCoach.kt
 ├── ui/
 │   ├── ActivityBottomSheet.kt
 │   ├── FormatUtils.kt
