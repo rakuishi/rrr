@@ -54,22 +54,28 @@ class TrackingService : Service() {
         private val _elapsedMs = MutableStateFlow(0L)
         val elapsedMs: StateFlow<Long> = _elapsedMs.asStateFlow()
 
+        private val _totalDistanceM = MutableStateFlow(0.0)
+        val totalDistanceM: StateFlow<Double> = _totalDistanceM.asStateFlow()
+
         fun resetState() {
             _trackingPoints.value = emptyList()
             _isTracking.value = false
             _elapsedMs.value = 0L
+            _totalDistanceM.value = 0.0
         }
     }
 
     private var activityId: Long = 0
     private var startTimeMs: Long = 0
     private var lastLocation: Location? = null
+    private lateinit var voiceCoach: VoiceCoach
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        voiceCoach = VoiceCoach(this)
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 for (location in result.locations) {
@@ -85,7 +91,14 @@ class TrackingService : Service() {
                         val repository = (application as App).repository
                         repository.insertPoint(point)
                     }
+
+                    // 距離を累積し、マイルストーンをチェック
+                    val prevLoc = lastLocation
+                    if (prevLoc != null) {
+                        _totalDistanceM.value += prevLoc.distanceTo(location)
+                    }
                     lastLocation = location
+                    voiceCoach.checkMilestone(_totalDistanceM.value, _elapsedMs.value)
                     Log.d(TAG, "Point: ${location.latitude}, ${location.longitude}, accuracy: ${location.accuracy}")
                 }
             }
@@ -116,6 +129,7 @@ class TrackingService : Service() {
             fusedClient.requestLocationUpdates(request, locationCallback, mainLooper)
             startTimeMs = System.currentTimeMillis()
             _isTracking.value = true
+            voiceCoach.start()
             // 毎秒経過時間を更新
             scope.launch {
                 while (_isTracking.value) {
@@ -131,6 +145,7 @@ class TrackingService : Service() {
     }
 
     private fun stopTracking() {
+        voiceCoach.shutdown()
         fusedClient.removeLocationUpdates(locationCallback)
         _isTracking.value = false
         lastLocation = null
@@ -165,6 +180,7 @@ class TrackingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        voiceCoach.shutdown()
         scope.cancel()
     }
 

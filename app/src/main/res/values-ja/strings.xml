@@ -22,4 +22,11 @@
     <!-- TrackingService -->
     <string name="notification_channel_name">トラッキング</string>
     <string name="notification_recording">ランニングを記録中…</string>
+
+    <!-- VoiceCoach -->
+    <plurals name="voice_km">
+        <item quantity="other">%dキロメートル</item>
+    </plurals>
+    <string name="voice_minutes">%d分</string>
+    <string name="voice_seconds">%d秒</string>
 </resources>
