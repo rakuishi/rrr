@@ -33,8 +33,8 @@ internal fun formatTime(ms: Long): String {
 
 internal fun formatDistance(meters: Double): String {
     return if (meters >= 1000) {
-        String.format(Locale.US, "%.2fkm", meters / 1000)
+        String.format(Locale.US, "%.2f km", meters / 1000)
     } else {
-        String.format(Locale.US, "%.0fm", meters)
+        String.format(Locale.US, "%.0f m", meters)
     }
 }

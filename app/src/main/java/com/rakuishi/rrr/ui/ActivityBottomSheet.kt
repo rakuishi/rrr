@@ -146,6 +146,12 @@ private fun ActivityRow(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
+                    text = "/",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
                     text = formatDistance(activity.totalDistanceM),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
